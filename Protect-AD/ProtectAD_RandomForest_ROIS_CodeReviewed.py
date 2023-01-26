@@ -262,43 +262,54 @@ def mean_median_mode_imputation(X_train, X_test, random_state_seed):
 
 
 
-def result_metrics_binary(y_prediction_result_metrics_binary, clf_result_metrics_binary, X_test_scaled_imputed_selected_result_metrics_binary):
-    """Result metrics are calculated and collected in a dictionary"""
+def result_metrics_binary(y_pred, y_true, y_prob, fitted_clf = None):
+    """Result metrics are calculated"""
 
     counter_class1_correct = 0
     counter_class2_correct = 0
     counter_class1_incorrect = 0
     counter_class2_incorrect = 0
-    y_test_result_metrics_binary = y_prediction_result_metrics_binary[:,1]
 
-    for i in range(len(y_test_result_metrics_binary)):
-        if y_prediction_result_metrics_binary[i,1] == y_prediction_result_metrics_binary[i,0]:
-            y_prediction_result_metrics_binary[i,2] = 1
-            if y_prediction_result_metrics_binary[i,1] == 1:
+    # Initialize vector saying whether the prediction is correct
+    is_prediction_correct = np.zeros(len(y_pred))
+
+    for i in range(len(y_pred)):
+        if y_pred[i] == y_true[i]:
+            is_prediction_correct[i] = 1
+            if y_true[i] == 1:
                 counter_class1_correct = counter_class1_correct + 1
             else:
                 counter_class2_correct = counter_class2_correct + 1
         else:
-            y_prediction_result_metrics_binary[i,2] = 0
-            if y_prediction_result_metrics_binary[i,1] == 1:
+            is_prediction_correct[i] = 0
+            if y_true[i] == 1:
                 counter_class1_incorrect = counter_class1_incorrect + 1
             else:
                 counter_class2_incorrect = counter_class2_incorrect + 1
 
-    accuracy = y_prediction_result_metrics_binary.mean(axis=0)[2]
+    accuracy = np.mean(is_prediction_correct)
     accuracy_class1 = counter_class1_correct / (counter_class1_correct + counter_class1_incorrect)
     accuracy_class2 = counter_class2_correct / (counter_class2_correct + counter_class2_incorrect)
     balanced_accuracy = (accuracy_class1 + accuracy_class2) / 2
-    oob_accuracy = clf_result_metrics_binary.oob_score_
-    log_loss_value = log_loss(y_test_result_metrics_binary, clf_result_metrics_binary.predict_proba(X_test_scaled_imputed_selected_result_metrics_binary), normalize=True)
-
-    fpr, tpr, thresholds = roc_curve(y_prediction_result_metrics_binary[:,1], clf_result_metrics_binary.predict_proba(X_test_scaled_imputed_selected_result_metrics_binary)[:,1])
+    
+    # Calculate metrics only if a fitted classifier is given
+    if fitted_clf is None:
+        oob_accuracy = float("nan")
+        log_loss_value = float("nan")
+    else:
+        try: # oob accuracy only for random forest and similar classifiers
+            oob_accuracy = fitted_clf.oob_score_
+        except:
+            oob_accuracy = float("nan")
+        log_loss_value = log_loss(y_pred, y_prob, normalize=True)
+        
+    fpr, tpr, thresholds = roc_curve(y_pred, y_prob)
     mean_fpr = np.linspace(0, 1, 100)
     tprs = np.interp(mean_fpr, fpr, tpr)
     roc_auc = auc(fpr, tpr)
-    fraction_positives, mean_predicted_value = calibration_curve(y_test_result_metrics_binary, clf_result_metrics_binary.predict_proba(X_test_scaled_imputed_selected_result_metrics_binary)[:,1], n_bins=10)
-
-    return accuracy, accuracy_class1, accuracy_class2, balanced_accuracy, oob_accuracy, log_loss_value, fpr, tpr, thresholds, mean_fpr, tprs, roc_auc, fraction_positives, mean_predicted_value
+    fraction_positives, mean_predicted_value = calibration_curve(y_pred, y_prob, n_bins=10)
+    
+    return accuracy, accuracy_class1, accuracy_class2, balanced_accuracy, oob_accuracy, log_loss_value, fpr, tpr, thresholds, tprs, roc_auc, fraction_positives, mean_predicted_value
 
 
 def save_scores(accuracy, accuracy_class1, accuracy_class2, balanced_accuracy, oob_accuracy, log_loss_value, feature_importances, fpr, tpr, tprs, roc_auc, fraction_positives, mean_predicted_value):
