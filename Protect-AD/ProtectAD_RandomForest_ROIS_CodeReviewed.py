@@ -605,45 +605,11 @@ def meta_learner_majority_voting(numrun):
         vote_majority[y] = statistics.mode((meta_learner_inputs_demo[y,1], meta_learner_inputs_conn[y,1], meta_learner_inputs_graph[y,1]))
         vote_majority_proba[y] = (meta_learner_inputs_demo[y,1] + meta_learner_inputs_conn[y,1] + meta_learner_inputs_graph[y,1])/3
         vote_majority_proba_2[y] = 1- vote_majority_proba[y]
-        if vote_majority[y] == meta_learner_inputs_demo[y,0]:
-            vote_majority_result[y] = 1
-        else:
-            vote_majority_result[y] = 0
-
-
-    accuracy_per_subject = vote_majority_result.mean(axis=1)
-
-    counter_class1_correct = 0
-    counter_class2_correct = 0
-    counter_class1_incorrect = 0
-    counter_class2_incorrect = 0
-
-    for i in range(len(accuracy_per_subject)):
-        if accuracy_per_subject[i] == 1:
-            if meta_learner_inputs_demo[i,0] == 1:
-                counter_class1_correct = counter_class1_correct + 1
-            else:
-                counter_class2_correct = counter_class2_correct + 1
-        else:
-            if meta_learner_inputs_demo[i,0] == 1:
-                counter_class1_incorrect = counter_class1_incorrect + 1
-            else:
-                counter_class2_incorrect = counter_class2_incorrect + 1
-
-    accuracy = accuracy_per_subject.mean(axis=0)
-    accuracy_class1 = counter_class1_correct / (counter_class1_correct + counter_class1_incorrect)
-    accuracy_class2 = counter_class2_correct / (counter_class2_correct + counter_class2_incorrect)
-    balanced_accuracy = (accuracy_class1 + accuracy_class2) / 2
-
+        
     feature_importances = np.ones((3))
-    oob_accuracy = 1
-    log_loss_value = 1
-    fpr, tpr, thresholds = roc_curve(meta_learner_inputs_demo[:,0], vote_majority_proba_2[:])
-    mean_fpr = np.linspace(0, 1, 100)
-    tprs = np.interp(mean_fpr, fpr, tpr)
-    roc_auc = auc(fpr, tpr)
-    fraction_positives, mean_predicted_value = calibration_curve(meta_learner_inputs_demo[:,0],vote_majority_proba_2[:], n_bins=10)
-
+    
+    accuracy, accuracy_class1, accuracy_class2, balanced_accuracy, oob_accuracy, log_loss_value, fpr, tpr, thresholds, tprs, roc_auc, fraction_positives, mean_predicted_value = result_metrics_binary(y_pred = vote_majority, y_true = meta_learner_inputs_demo[:,0], y_prob = vote_majority_proba)
+    
     return accuracy, accuracy_class1, accuracy_class2, balanced_accuracy, oob_accuracy, log_loss_value, feature_importances, fpr, tpr, tprs, roc_auc, fraction_positives, mean_predicted_value
 
 
@@ -687,47 +653,13 @@ def meta_learner_softmax_voting(numrun):
         vote_softmax_raw[z] = meta_learner_inputs_demo[z,2] + meta_learner_inputs_conn[z,2] + meta_learner_inputs_graph[z,2]
         vote_softmax_raw_2[z] = (meta_learner_inputs_demo[z,3] + meta_learner_inputs_conn[z,3] + meta_learner_inputs_graph[z,3])/3
         if vote_softmax_raw[z] > 1.5:
-            vote_softmax[z] = 0
-        else:
             vote_softmax[z] = 1
-        if vote_softmax[z] == meta_learner_inputs_demo[z,0]:
-            vote_softmax_result[z] = 1
         else:
-            vote_softmax_result[z] = 0  
-
-
-    accuracy_per_subject = vote_softmax_result.mean(axis=1)
-
-    counter_class1_correct = 0
-    counter_class2_correct = 0
-    counter_class1_incorrect = 0
-    counter_class2_incorrect = 0
-
-    for i in range(len(accuracy_per_subject)):
-        if accuracy_per_subject[i] == 1:
-            if meta_learner_inputs_demo[i,0] == 1:
-                counter_class1_correct = counter_class1_correct + 1
-            else:
-                counter_class2_correct = counter_class2_correct + 1
-        else:
-            if meta_learner_inputs_demo[i,0] == 1:
-                counter_class1_incorrect = counter_class1_incorrect + 1
-            else:
-                counter_class2_incorrect = counter_class2_incorrect + 1
-
-    accuracy = accuracy_per_subject.mean(axis=0)
-    accuracy_class1 = counter_class1_correct / (counter_class1_correct + counter_class1_incorrect)
-    accuracy_class2 = counter_class2_correct / (counter_class2_correct + counter_class2_incorrect)
-    balanced_accuracy = (accuracy_class1 + accuracy_class2) / 2
+            vote_softmax[z] = 0
     
     feature_importances = np.ones((3))
-    oob_accuracy = 1
-    log_loss_value = 1
-    fpr, tpr, thresholds = roc_curve(meta_learner_inputs_demo[:,0], vote_softmax_raw_2[:])
-    mean_fpr = np.linspace(0, 1, 100)
-    tprs = np.interp(mean_fpr, fpr, tpr)
-    roc_auc = auc(fpr, tpr)
-    fraction_positives, mean_predicted_value = calibration_curve(meta_learner_inputs_demo[:,0],vote_softmax_raw_2[:], n_bins=10)
+    
+    accuracy, accuracy_class1, accuracy_class2, balanced_accuracy, oob_accuracy, log_loss_value, fpr, tpr, thresholds, tprs, roc_auc, fraction_positives, mean_predicted_value = result_metrics_binary(y_pred = vote_softmax, y_true = meta_learner_inputs_demo[:,0], y_prob = vote_softmax_raw_2)
 
     return accuracy, accuracy_class1, accuracy_class2, balanced_accuracy, oob_accuracy, log_loss_value, feature_importances, fpr, tpr, tprs, roc_auc, fraction_positives, mean_predicted_value
 
@@ -786,47 +718,13 @@ def meta_learner_Softmax_by_oob(numrun):
         threshold[z] = 0.5*oob_demo + 0.5*oob_conn + 0.5*oob_graph
         vote_softmax_raw_2[z] = (meta_learner_inputs_demo[z,3]*oob_demo + meta_learner_inputs_conn[z,3]*oob_conn + meta_learner_inputs_graph[z,3]*oob_graph)/(threshold[z]*2)
         if vote_softmax_raw[z] > threshold[z]:
-            vote_softmax[z] = 0
-        else:
             vote_softmax[z] = 1
-        if vote_softmax[z] == meta_learner_inputs_demo[z,0]:
-            vote_softmax_result[z] = 1
         else:
-            vote_softmax_result[z] = 0
-
-
-    accuracy_per_subject = vote_softmax_result.mean(axis=1)
-
-    counter_class1_correct = 0
-    counter_class2_correct = 0
-    counter_class1_incorrect = 0
-    counter_class2_incorrect = 0
-
-    for i in range(len(accuracy_per_subject)):
-        if accuracy_per_subject[i] == 1:
-            if meta_learner_inputs_demo[i,0] == 1:
-                counter_class1_correct = counter_class1_correct + 1
-            else:
-                counter_class2_correct = counter_class2_correct + 1
-        else:
-            if meta_learner_inputs_demo[i,0] == 1:
-                counter_class1_incorrect = counter_class1_incorrect + 1
-            else:
-                counter_class2_incorrect = counter_class2_incorrect + 1
-
-    accuracy = accuracy_per_subject.mean(axis=0)
-    accuracy_class1 = counter_class1_correct / (counter_class1_correct + counter_class1_incorrect)
-    accuracy_class2 = counter_class2_correct / (counter_class2_correct + counter_class2_incorrect)
-    balanced_accuracy = (accuracy_class1 + accuracy_class2) / 2
-
+            vote_softmax[z] = 0
+    
     feature_importances = np.ones((3))
-    oob_accuracy = 1
-    log_loss_value = 1
-    fpr, tpr, thresholds = roc_curve(meta_learner_inputs_demo[:,0], vote_softmax_raw_2[:])
-    mean_fpr = np.linspace(0, 1, 100)
-    tprs = np.interp(mean_fpr, fpr, tpr)
-    roc_auc = auc(fpr, tpr)
-    fraction_positives, mean_predicted_value = calibration_curve(meta_learner_inputs_demo[:,0],vote_softmax_raw_2[:], n_bins=10)
+
+    accuracy, accuracy_class1, accuracy_class2, balanced_accuracy, oob_accuracy, log_loss_value, fpr, tpr, thresholds, tprs, roc_auc, fraction_positives, mean_predicted_value = result_metrics_binary(y_pred = vote_softmax, y_true = meta_learner_inputs_demo[:,0], y_prob = vote_softmax_raw_2)
 
     return accuracy, accuracy_class1, accuracy_class2, balanced_accuracy, oob_accuracy, log_loss_value, feature_importances, fpr, tpr, tprs, roc_auc, fraction_positives, mean_predicted_value
 
@@ -841,7 +739,6 @@ def meta_learner_2nd_level_logreg(numrun):
     """
     "Import Inputs
     """
-
     full_path_cv_option_features_train_demo = os.path.join(PATH_WORKINGDIRECTORY, 'metalearner_input', OPTIONS_OVERALL['name_model'] + OPTIONS_OVERALL['abbreviations_features'][0] + '_save_cv_fold_' + str (random_state_seed) + '_predictions.txt')
     meta_learner_inputs_demo = read_csv(full_path_cv_option_features_train_demo, sep="\s", header=None, engine='python')
 
@@ -850,7 +747,9 @@ def meta_learner_2nd_level_logreg(numrun):
 
     full_path_cv_option_features_train_graph = os.path.join(PATH_WORKINGDIRECTORY, 'metalearner_input', OPTIONS_OVERALL['name_model'] + OPTIONS_OVERALL['abbreviations_features'][2] + '_save_cv_fold_' + str (random_state_seed) + '_predictions.txt')
     meta_learner_inputs_graph = read_csv(full_path_cv_option_features_train_graph, sep="\s", header=None, engine='python')
-
+    
+    # Ich fände es gut, wenn die Pfade für die untersch. Daten auch untersch. Namen hätten (z.B. _train_demo vs. _test_demo)
+    # Sonst ist es sehr verwirrend (siehe auch nächster Metalearner)
     full_path_cv_option_features_train_demo = os.path.join(PATH_WORKINGDIRECTORY, 'metalearner_input', OPTIONS_OVERALL['name_model'] + OPTIONS_OVERALL['abbreviations_features'][0] + '_save_cv_fold_' + str (random_state_seed) + '_train_predictions.txt')
     meta_learner_input_train_demo = read_csv(full_path_cv_option_features_train_demo, sep="\s", header=None, engine='python')
 
@@ -887,47 +786,13 @@ def meta_learner_2nd_level_logreg(numrun):
     clf = LogisticRegression(penalty='l2', dual=False, tol=0.0001, C=1.0, fit_intercept=True, intercept_scaling=1, class_weight=None, random_state=None, solver='lbfgs', max_iter=100, multi_class='auto', verbose=0, warm_start=False, n_jobs=None, l1_ratio=None)
     clf = clf.fit(meta_learner_input_features_train, meta_learner_input_labels_train)
 
-    y_prediction = np.zeros((len(meta_learner_input_labels_test), 3))
-
-    y_prediction[:,0] = clf.predict(meta_learner_input_features_test)
-
-    y_prediction[:,1] = meta_learner_input_labels_test[:]
-
-
-    counter_class1_correct = 0
-    counter_class2_correct = 0
-    counter_class1_incorrect = 0
-    counter_class2_incorrect = 0
-
-    for i in range(len(meta_learner_input_labels_test)):
-        if y_prediction[i,0] == y_prediction[i,1]:
-            y_prediction[i,2] = 1
-            if y_prediction[i,1] == 1:
-                counter_class1_correct = counter_class1_correct + 1
-            else:
-                counter_class2_correct = counter_class2_correct + 1
-        else:
-            y_prediction[i,2] = 0
-            if y_prediction[i,1] == 1:
-                counter_class1_incorrect = counter_class1_incorrect + 1
-            else:
-                counter_class2_incorrect = counter_class2_incorrect + 1
-
-
-    accuracy = y_prediction.mean(axis=0)[2]
-    accuracy_class1 = counter_class1_correct / (counter_class1_correct + counter_class1_incorrect)
-    accuracy_class2 = counter_class2_correct / (counter_class2_correct + counter_class2_incorrect)
-    balanced_accuracy = (accuracy_class1 + accuracy_class2) / 2
-    oob_accuracy = 1
-    log_loss_value = log_loss(meta_learner_input_labels_test, clf.predict_proba(meta_learner_input_features_test), normalize=True)
-
+    y_pred = clf.predict(meta_learner_input_features_test)
+    y_true = meta_learner_input_labels_test[:]
+    y_prob = clf.predict_proba(meta_learner_input_features_test)[:,1]
+    
     feature_importances = np.transpose(clf.coef_)[:,0]
-    fpr, tpr, thresholds = roc_curve(meta_learner_input_labels_test, clf.predict_proba(meta_learner_input_features_test)[:,1])
-    mean_fpr = np.linspace(0, 1, 100)
-    tprs = np.interp(mean_fpr, fpr, tpr)
-    roc_auc = auc(fpr, tpr)
-    fraction_positives, mean_predicted_value = calibration_curve(meta_learner_input_labels_test, clf.predict_proba(meta_learner_input_features_test)[:,1], n_bins=10)
 
+    accuracy, accuracy_class1, accuracy_class2, balanced_accuracy, oob_accuracy, log_loss_value, fpr, tpr, thresholds, tprs, roc_auc, fraction_positives, mean_predicted_value = result_metrics_binary(y_pred = y_pred, y_true = y_true, y_prob = y_prob, fitted_clf = clf)
     return accuracy, accuracy_class1, accuracy_class2, balanced_accuracy, oob_accuracy, log_loss_value, feature_importances, fpr, tpr, tprs, roc_auc, fraction_positives, mean_predicted_value
 
 def meta_learner_2nd_level_RF(numrun):
@@ -986,48 +851,15 @@ def meta_learner_2nd_level_RF(numrun):
 
     clf = RandomForestClassifier(n_estimators= 1000, criterion= 'gini', max_features= 'auto', max_depth= None, min_samples_split= 2, min_samples_leaf= 1, bootstrap= True, oob_score=True, random_state=random_state_seed)
     clf = clf.fit(meta_learner_input_features_train, meta_learner_input_labels_train)
-
-    y_prediction = np.zeros((len(meta_learner_input_labels_test), 3))
-
-    y_prediction[:,0] = clf.predict(meta_learner_input_features_test)
-
-    y_prediction[:,1] = meta_learner_input_labels_test[:]
-
-
-    counter_class1_correct = 0
-    counter_class2_correct = 0
-    counter_class1_incorrect = 0
-    counter_class2_incorrect = 0
-
-    for i in range(len(meta_learner_input_labels_test)):
-        if y_prediction[i,0] == y_prediction[i,1]:
-            y_prediction[i,2] = 1
-            if y_prediction[i,1] == 1:
-                counter_class1_correct = counter_class1_correct + 1
-            else:
-                counter_class2_correct = counter_class2_correct + 1
-        else:
-            y_prediction[i,2] = 0
-            if y_prediction[i,1] == 1:
-                counter_class1_incorrect = counter_class1_incorrect + 1
-            else:
-                counter_class2_incorrect = counter_class2_incorrect + 1
-
-
-    accuracy = y_prediction.mean(axis=0)[2]
-    accuracy_class1 = counter_class1_correct / (counter_class1_correct + counter_class1_incorrect)
-    accuracy_class2 = counter_class2_correct / (counter_class2_correct + counter_class2_incorrect)
-    balanced_accuracy = (accuracy_class1 + accuracy_class2) / 2
-    oob_accuracy = 1
-    log_loss_value = log_loss(meta_learner_input_labels_test, clf.predict_proba(meta_learner_input_features_test), normalize=True)
-
+    
+    y_pred = clf.predict(meta_learner_input_features_test)
+    y_true = meta_learner_input_labels_test[:]
+    y_prob = clf.predict_proba(meta_learner_input_features_test)[:,1]
+    
     feature_importances = clf.feature_importances_
-    fpr, tpr, thresholds = roc_curve(meta_learner_input_labels_test, clf.predict_proba(meta_learner_input_features_test)[:,1])
-    mean_fpr = np.linspace(0, 1, 100)
-    tprs = np.interp(mean_fpr, fpr, tpr)
-    roc_auc = auc(fpr, tpr)
-    fraction_positives, mean_predicted_value = calibration_curve(meta_learner_input_labels_test, clf.predict_proba(meta_learner_input_features_test)[:,1], n_bins=10)
-
+    
+    accuracy, accuracy_class1, accuracy_class2, balanced_accuracy, oob_accuracy, log_loss_value, fpr, tpr, thresholds, tprs, roc_auc, fraction_positives, mean_predicted_value = result_metrics_binary(y_pred = y_pred, y_true = y_true, y_prob = y_prob, fitted_clf = clf)
+                                                                                                                                                                                                                 
     return accuracy, accuracy_class1, accuracy_class2, balanced_accuracy, oob_accuracy, log_loss_value, feature_importances, fpr, tpr, tprs, roc_auc, fraction_positives, mean_predicted_value
 
 def integrate_2nd_lvl_results():
